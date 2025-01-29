@@ -128,7 +128,7 @@ Q: Who are Fetch’s power users? (see query#17)
     • This is because the 80th percentile of the sum_spending_per_user is approximately 19.35, so I make it 20 for simplicity;
     • And I want to focus on users who are actively engaged and not just first-time buyers.
 
-age_group     GENDER  LANGUAGE   STATE    power_user_count  avg_spending_per_user   avg_receipts_per_user	  avg_items_per_user
+age_group     GENDER  LANGUAGE   STATE    power_user_count    avg_spending_per_user   avg_receipts_per_user	  avg_items_per_user
 ----------    ------  ----------  ------  -----------------   ----------------------  ----------------------  ------------------
 26-35	      female	en	      NC	    2	                9.72	                2.5                 	2.5
 36-50	      female	en	      IL	    2	                7.295	                2.0                     2.0
@@ -139,7 +139,7 @@ age_group     GENDER  LANGUAGE   STATE    power_user_count  avg_spending_per_use
 36-50	      female	en	      AL	    1	                8.27	                2.0	                2.0
 36-50	      female	en	      PA	    1	                11.3	                3.0	                3.0
 36-50	      female	en	      WV	    1	                6.25	                3.0	                3.0
-36-50	      female	es-419	      CA	    1	                14.27	                2.0	                 2.0
+36-50	      female	es-419	      CA	    1	                14.27	                2.0	                2.0
 36-50	      male	en	      NC	    1	                8.98	                2.0	                2.0
 36-50	      male	en	      NY	    1	                6.68	                2.0	                2.0
 50+	      female	en	      FL	    1	                10.85	                2.0	                2.0
