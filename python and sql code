@@ -1,0 +1,430 @@
+-- In Jupyter Notebook, I used Python to read three CSV files and uploaded them to a SQLite database as three tables. 
+import pandas as pd
+from sqlalchemy import create_engine
+
+
+csv_file = "/Users/cathy99/Downloads/USER_TAKEHOME.csv"  
+df = pd.read_csv(csv_file, dtype=str)
+engine = create_engine("sqlite:///cathy_database.db")  
+table_name = "user_table"  
+df.to_sql(table_name, con=engine, if_exists="replace", index=False)
+
+
+csv_file = "/Users/cathy99/Downloads/TRANSACTION_TAKEHOME.csv"
+df = pd.read_csv(csv_file, dtype=str)
+table_name = "transaction_table"
+df.to_sql(table_name, con=engine, if_exists="replace", index=False)
+
+
+csv_file = "/Users/cathy99/Downloads/PRODUCTS_TAKEHOME.csv"
+df = pd.read_csv(csv_file, dtype=str)
+table_name = "product_table"
+df.to_sql(table_name, con=engine, if_exists="replace", index=False)
+print(f"Data has been successfully written to the table '{table_name}'!")
+
+
+
+-- I then connected to the SQLite database using DB Browser for SQLite, accessed the tables, and performed data analysis.
+-- Please see 'answer in text file' for my answers.
+
+query#1.1:
+SELECT
+    -- Calculate null rate for each column
+    (COUNT(CASE WHEN RECEIPT_ID IS NULL THEN 1 END) * 100.0 / COUNT(*)) AS RECEIPT_ID_NULL_RATE,
+    (COUNT(CASE WHEN PURCHASE_DATE IS NULL THEN 1 END) * 100.0 / COUNT(*)) AS PURCHASE_DATE_NULL_RATE,
+    (COUNT(CASE WHEN SCAN_DATE IS NULL THEN 1 END) * 100.0 / COUNT(*)) AS SCAN_DATE_NULL_RATE,
+    (COUNT(CASE WHEN STORE_NAME IS NULL THEN 1 END) * 100.0 / COUNT(*)) AS STORE_NAME_NULL_RATE,
+    (COUNT(CASE WHEN USER_ID IS NULL THEN 1 END) * 100.0 / COUNT(*)) AS USER_ID_NULL_RATE,
+    (COUNT(CASE WHEN BARCODE IS NULL THEN 1 END) * 100.0 / COUNT(*)) AS BARCODE_NULL_RATE,
+    (COUNT(CASE WHEN FINAL_QUANTITY IS NULL THEN 1 END) * 100.0 / COUNT(*)) AS FINAL_QUANTITY_NULL_RATE,
+    (COUNT(CASE WHEN FINAL_SALE IS NULL THEN 1 END) * 100.0 / COUNT(*)) AS FINAL_SALE_NULL_RATE
+FROM transaction_table;
+
+
+query#1.2:
+SELECT
+    -- Calculate null rate for each column
+    (COUNT(CASE WHEN CREATED_DATE IS NULL THEN 1 END) * 100.0 / COUNT(*)) AS CREATED_DATE_NULL_RATE,
+    (COUNT(CASE WHEN BIRTH_DATE IS NULL THEN 1 END) * 100.0 / COUNT(*)) AS BIRTH_DATE_NULL_RATE,
+    (COUNT(CASE WHEN STATE IS NULL THEN 1 END) * 100.0 / COUNT(*)) AS STATE_NULL_RATE,
+    (COUNT(CASE WHEN LANGUAGE IS NULL THEN 1 END) * 100.0 / COUNT(*)) AS LANGUAGE_NULL_RATE,
+    (COUNT(CASE WHEN GENDER IS NULL THEN 1 END) * 100.0 / COUNT(*)) AS GENDER_NULL_RATE
+FROM user_table;
+
+
+query#1.3:
+SELECT
+    -- Calculate null rate for each column
+    (COUNT(CASE WHEN CATEGORY_1 IS NULL THEN 1 END) * 100.0 / COUNT(*)) AS CATEGORY_1_NULL_RATE,
+    (COUNT(CASE WHEN CATEGORY_2 IS NULL THEN 1 END) * 100.0 / COUNT(*)) AS CATEGORY_2_NULL_RATE,
+    (COUNT(CASE WHEN CATEGORY_3 IS NULL THEN 1 END) * 100.0 / COUNT(*)) AS CATEGORY_3_NULL_RATE,
+    (COUNT(CASE WHEN CATEGORY_4 IS NULL THEN 1 END) * 100.0 / COUNT(*)) AS CATEGORY_4_NULL_RATE,
+    (COUNT(CASE WHEN MANUFACTURER IS NULL THEN 1 WHEN MANUFACTURER = 'PLACEHOLDER MANUFACTURER' THEN 1 END) * 100.0 / COUNT(*)) AS MANUFACTURER_NULL_RATE,
+    (COUNT(CASE WHEN BRAND IS NULL THEN 1 END) * 100.0 / COUNT(*)) AS BRAND_NULL_RATE,
+    (COUNT(CASE WHEN BARCODE IS NULL THEN 1 END) * 100.0 / COUNT(*)) AS BARCODE_NULL_RATE
+FROM product_table;
+
+
+query#2.1
+WITH linked_data AS (
+    SELECT 
+        t.RECEIPT_ID,
+        t.USER_ID,
+        u.ID
+    FROM transaction_table t
+    LEFT JOIN user_table u 
+        ON t.USER_ID = u.ID
+),
+unlinked_data AS (
+    SELECT * 
+    FROM linked_data
+    WHERE ID IS NULL
+)
+-- Calculate the percentage of failed links
+SELECT 
+    (COUNT(*) * 100.0 / (SELECT COUNT(*) FROM transaction_table)) AS failed_link_percentage
+FROM unlinked_data;
+
+
+query#2.2
+WITH linked_data AS (
+    SELECT 
+        t.RECEIPT_ID,
+        t.BARCODE,
+        p.BARCODE AS product_barcode
+    FROM transaction_table t
+    LEFT JOIN product_table p 
+        ON t.BARCODE = p.BARCODE
+),
+unlinked_data AS (
+    SELECT * 
+    FROM linked_data
+    WHERE product_barcode IS NULL
+)
+SELECT 
+    (COUNT(*) * 100.0 / (SELECT COUNT(*) FROM transaction_table)) AS failed_link_percentage
+FROM unlinked_data;
+
+
+query#3: 
+SELECT 
+    Receipt_id, Purchase_date, Scan_date, Store_name, User_id, Barcode, Final_quantity, Final_sale, COUNT(*) AS Duplicate_Count
+FROM 
+    transaction_table
+GROUP BY 
+    Receipt_id, Purchase_date, Scan_date, Store_name, User_id, Barcode, Final_quantity, Final_sale
+HAVING 
+    COUNT(*) > 1;
+
+
+query#4  
+SELECT 
+    RECEIPT_ID, PURCHASE_DATE, SCAN_DATE, STORE_NAME, USER_ID, BARCODE, FINAL_QUANTITY, COUNT(distinct FINAL_SALE) AS duplicate_count
+FROM 
+    transaction_table
+GROUP BY 
+    RECEIPT_ID, PURCHASE_DATE, SCAN_DATE, STORE_NAME, USER_ID, BARCODE, FINAL_QUANTITY
+HAVING 
+    COUNT(*) > 1
+ORDER BY 
+    duplicate_count DESC;
+
+
+query#5
+-- an example having all fields the same, but 5 distinct FINAL_SALE values.
+SELECT 
+    * 
+FROM 
+    transaction_table 
+WHERE 
+    RECEIPT_ID = '2acd7e8d-37df-4e51-8ee5-9a9c8c1d9711'  
+    AND PURCHASE_DATE = '2024-09-08' 
+    AND SCAN_DATE = '2024-09-08 11:13:01.935 Z' 
+    AND STORE_NAME = 'WALMART'  
+    AND USER_ID = '663140f9b7b24d45d938f3be' 
+    AND BARCODE = '024000048336' 
+    AND FINAL_QUANTITY = '1.00';
+
+
+query#6
+SELECT
+    Barcode,
+    LENGTH(Barcode) AS Barcode_Length,
+    COUNT(*) AS Product_Count
+FROM
+    transaction_table
+GROUP BY
+    Barcode_Length;
+
+
+query#7    
+SELECT 
+	*
+FROM 
+	transaction_table
+WHERE 
+	FINAL_QUANTITY = 'zero' 
+	AND FINAL_SALE != '0.00';
+
+
+query#8
+SELECT	
+		RECEIPT_ID,
+		PURCHASE_DATE,
+		SCAN_DATE
+FROM 
+	transaction_table
+WHERE	
+	SCAN_DATE < PURCHASE_DATE;
+
+
+query#9
+SELECT 
+    FINAL_QUANTITY,  COUNT(*) AS quantity_count
+FROM  
+    transaction_table
+GROUP BY  
+    FINAL_QUANTITY
+ORDER BY 
+    quantity_count DESC;
+
+
+query#10
+SELECT
+    * ,  (julianday(CURRENT_DATE) - julianday(Birth_Date)) / 365  as age
+FROM
+    user_table
+WHERE
+    (julianday(CURRENT_DATE) - julianday(Birth_Date)) / 365 > 100  -- Age > 100 years
+
+
+
+query#11
+SELECT
+    * 
+FROM
+    user_table
+WHERE
+    Created_Date <  Birth_Date;  -- Created Date Before Birth Date
+
+
+query#12
+SELECT
+    BARCODE,
+    COUNT(DISTINCT BRAND) AS BRAND_COUNT
+FROM
+    product_table
+GROUP BY
+    BARCODE
+HAVING
+    COUNT(*) > 1;
+
+
+query#13
+SELECT 
+    BRAND,
+    COUNT(DISTINCT MANUFACTURER) AS MANUFACTURER_COUNT
+FROM 
+    product_table
+GROUP BY 
+    BRAND
+HAVING 
+    MANUFACTURER_COUNT > 1;
+
+
+query#14
+SELECT
+    Barcode,
+    LENGTH(Barcode) AS Barcode_Length,
+    COUNT(*) AS Product_Count
+FROM
+    product_table
+GROUP BY
+    Barcode_Length
+
+
+query#15
+-- create all needed tables by excluding the data quality issues found
+-- drop table ranked_brands;
+CREATE TABLE ranked_brands AS
+-- 845,441 -> 615,300 ROWS
+WITH RankedBrands AS (
+    SELECT
+        BARCODE,
+        BRAND,
+		-- Rank brands for each barcode by their frequency
+        ROW_NUMBER() OVER (PARTITION BY BARCODE ORDER BY COUNT(BRAND) DESC) AS BrandRank
+    FROM
+        product_table
+    WHERE 
+	-- Exclude invalid or missing barcodes and brands
+        BARCODE IS NOT NULL 
+        AND BRAND IS NOT NULL
+    GROUP BY
+        BARCODE, BRAND
+)
+SELECT
+    BARCODE,
+    BRAND
+FROM RankedBrands
+WHERE BrandRank = 1;
+
+
+-- drop table valid_users;
+CREATE TABLE valid_users AS
+-- 100,000->96,262 rows
+WITH valid_users AS (
+    SELECT *
+    FROM user_table
+    WHERE 
+        -- Ensure users is not older than 100 years old (might be fake data)
+        (julianday(CURRENT_DATE) - julianday(BIRTH_DATE)) / 365 <= 100
+        -- Ensure Created Date is after Birth Date
+        AND julianday(CREATED_DATE) >= julianday(BIRTH_DATE)
+)
+SELECT DISTINCT *
+FROM valid_users;
+
+
+-- drop table valid_transactions;
+CREATE TABLE valid_transactions AS
+-- Filter to include only valid transactions with unique RECEIPT_ID combinations
+-- 50,000 -> 21,477 rows
+WITH ranked_transactions AS (
+    SELECT 
+        RECEIPT_ID,
+        PURCHASE_DATE,
+        SCAN_DATE,
+        STORE_NAME,
+        USER_ID,
+        BARCODE,
+        FINAL_QUANTITY,
+        FINAL_SALE,
+        -- Rank rows based on FINAL_SALE in descending order, then on FINAL_QUANTITY, for each unique RECEIPT_ID
+        ROW_NUMBER() OVER (
+            PARTITION BY RECEIPT_ID
+            ORDER BY 
+                PURCHASE_DATE DESC,  -- Latest PURCHASE_DATE
+                SCAN_DATE DESC,      -- Latest SCAN_DATE
+                FINAL_SALE DESC,     -- Highest FINAL_SALE
+                FINAL_QUANTITY DESC  -- Highest FINAL_QUANTITY
+        ) AS RowRank
+    FROM transaction_table
+    WHERE 
+        FINAL_QUANTITY != 'zero'  -- Exclude zero quantity transactions
+        AND (FINAL_SALE != '0.00' AND TRIM(FINAL_SALE) != '')  -- Exclude invalid FINAL_SALE values
+        AND TRIM(BARCODE) NOT IN ('', '-1')  -- Exclude invalid or missing barcodes
+        AND SCAN_DATE >= PURCHASE_DATE  -- Ensure SCAN_DATE is later than PURCHASE_DATE
+)
+SELECT 
+    RECEIPT_ID, 
+    PURCHASE_DATE, 
+    SCAN_DATE, 
+    STORE_NAME, 
+    USER_ID, 
+    BARCODE, 
+    FINAL_QUANTITY, 
+    FINAL_SALE
+FROM ranked_transactions
+WHERE RowRank = 1;
+
+--The actual query is here
+WITH User_Age AS (
+    SELECT 
+        ID AS USER_ID,
+        (julianday(CURRENT_DATE) - julianday(BIRTH_DATE)) / 365 AS age
+    FROM valid_users
+    WHERE BIRTH_DATE IS NOT NULL
+),
+Filtered_Transactions AS (
+    SELECT 
+        t.RECEIPT_ID, 
+        t.USER_ID, 
+        p.BRAND,
+		u.AGE
+    FROM valid_transactions t
+    JOIN ranked_brands p 
+        ON t.BARCODE = p.BARCODE
+    JOIN User_Age u 
+        ON t.USER_ID = u.USER_ID
+    WHERE p.BRAND IS NOT NULL AND u.age >= 21
+)
+SELECT 
+    BRAND, 
+    COUNT(DISTINCT RECEIPT_ID) AS receipt_count
+FROM Filtered_Transactions
+GROUP BY BRAND
+ORDER BY receipt_count DESC
+LIMIT 5;
+
+
+query#16
+SELECT 
+    rb.BRAND, 
+    SUM(CAST(vt.FINAL_SALE AS DECIMAL(10, 2))) AS total_sales
+FROM 
+    valid_users vu
+JOIN valid_transactions vt ON vu.ID = vt.USER_ID
+JOIN ranked_brands rb ON vt.BARCODE = rb.BARCODE
+WHERE (julianday(CURRENT_DATE) - julianday(CREATED_DATE)) >= 180  -- Users with accounts for at least 6 months
+GROUP BY 
+    rb.BRAND
+ORDER BY 
+    total_sales DESC
+LIMIT 5;
+
+
+query#17
+-- Step 1: Aggregate transactions 
+WITH user_transactions AS (
+    SELECT 
+        vt.USER_ID,
+        SUM(CAST(vt.FINAL_SALE AS NUMERIC)) AS total_spending,
+        COUNT(DISTINCT vt.RECEIPT_ID) AS total_receipts,
+        COUNT(vt.BARCODE) AS total_items
+    FROM valid_transactions vt
+    JOIN valid_users vu ON vt.USER_ID = vu.ID  
+    GROUP BY vt.USER_ID
+	ORDER BY SUM(CAST(vt.FINAL_SALE AS NUMERIC)) DESC
+),
+-- Step 2: Add user information to aggregated transactions
+user_categories AS (
+    SELECT 
+        ut.USER_ID,
+        ut.total_spending,
+        ut.total_receipts,
+        ut.total_items,
+        vu.GENDER,
+        vu.LANGUAGE,
+        vu.STATE,
+        CAST((julianday(CURRENT_DATE) - julianday(vu.BIRTH_DATE)) / 365 AS INTEGER) AS AGE
+    FROM user_transactions ut
+    JOIN valid_users vu ON ut.USER_ID = vu.ID
+	ORDER BY total_spending DESC
+)
+-- Step 3: Identify Power Users and group by categories
+SELECT 
+    CASE 
+        WHEN age < 18 THEN 'Under 18'
+        WHEN age BETWEEN 18 AND 25 THEN '18-25'
+        WHEN age BETWEEN 26 AND 35 THEN '26-35'
+        WHEN age BETWEEN 36 AND 50 THEN '36-50'
+        ELSE '50+'
+    END AS age_group,
+    GENDER,
+    LANGUAGE,
+    STATE,
+    COUNT(DISTINCT USER_ID) AS power_user_count,
+    AVG(total_spending) AS avg_spending_per_user,
+    AVG(total_receipts) AS avg_receipts_per_user,
+    AVG(total_items) AS avg_items_per_user
+FROM user_categories
+    -- Define Power Users as those with total spending >20 or at least 2 receipts or at least 2 items
+ WHERE   total_spending >= 20
+    OR total_receipts >= 2
+	OR total_items >=2
+GROUP BY age_group, GENDER, LANGUAGE, STATE
+ORDER BY power_user_count DESC
+
+
+

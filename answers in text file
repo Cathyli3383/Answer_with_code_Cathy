@@ -1,0 +1,241 @@
+Q: Are there any data quality issues present? 
+
+1. Missing/Incomplete Data in all Three Files (see query#1.1)
+    • In the <Transaction file>, while most fields have no missing values, the Barcode field’s 11.52% null rate could still disrupt product tracking and reward allocation, 
+    affecting Fetch’s data accuracy and personalized services. 
+
+    • the <User file>, the Language field has a significant null rate of 30.51%, which is crucial for personalized services. There's also round 5% null rate for
+    State, Language, and gender. (see query#1.2)
+    
+    • In the <Products file>, Category_4 has a critical 92.02% missing values, severely limiting detailed product categorization. 
+    Missing data in Manufacturer and Brand (both at 26.78%) impacts Fetch’s ability to track product origins and brand performance. 
+    Additionally, the Manufacturer field also placeholders (e.g., "PLACEHOLDER MANUFACTURER"), which indicates incomplete or unprocessed data. 
+    The Barcode field (0.48% missing) is essential for linking products to transactions, and missing values risk disrupting transaction tracking and reward accuracy. (see query#1.3)
+
+
+2. Linking Key Mismatch in all Three Files
+    • Between <User File> and <Transaction file>: The query revealed a significant issue with linking the 2 tables using the USER_ID and ID keys. 
+    Approximately 99.5% of records in the <Transaction file> failed to link to any corresponding user in the <User File>, which indicates a mismatch or absence of valid 
+    user information for the majority of transactions. This is a critical data quality issue. (see query#2.1)
+
+    • Between <Products file> and <Transaction file>: The query revealed that approximately 50.35% of the data in the <Transaction file> failed to link to the product_table based on the BARCODE key. 
+    A substantial portion of transactions does not have a corresponding product entry. (see query#2.2)
+
+
+
+3.	In <Transaction file>
+• Duplicate Data
+    • Duplicate Transactions: The query identified 149 duplicate rows, where multiple records have identical values across all key columns such as 
+    Receipt_id, Purchase_date, Scan_date, Store_name, User_id, Barcode, Final_quantity, and Final_sale. (see query#3)
+
+• Inconsistent Data
+    • Inconsistent Final Sale Values and Duplicate Transactions: The query identified 12,496 rows where all fields were identical except for Final_sale. (see query#4-5)
+    • Inconsistent Barcode Lengths: The results showed that the Barcode field contained values with various lengths that deviated from the expected 12 or 13 characters, 
+    and -1 indicated invalid or placeholder values. (see query#6)
+
+• Data Integrity Issues
+    • Mismatch Between Final Quantity and Final Sale: Among the 12,500 rows where the Final Quantity was zero, 12,341 rows had a non-zero Final Sale. (see query#7)
+    • Mismatch Between Scan Date and Purchase Date: Scan Date was earlier than Purchase Date in 94 rows, suggesting potential fraud, manual manipulation, or system errors. (see query#8)
+
+• Inaccurate Data Types
+    • Data Type Inconsistency in Final Quantity: The query identified 12,500 rows where Final Quantity was stored as ‘zero’ (a string) instead of a numeric value.
+     'zero' represents the second most common value for Final Quantity, emphasizing the scale and potential impact of this data inconsistency. (see query#9)
+
+
+4. In <User File>
+ • Inconsistent Data
+    • Inconsistent Gender Field: Variations like "non_binary" vs. "Non-Binary" and different representations of "unknown" or similar terms created inconsistencies.
+    • Synonyms/Multiple Representations: Different terms like "not_listed", "not_specified", "My gender isn't listed", and "unknown" may refer to the same or similar concepts, 
+    but they are stored as distinct values.    
+
+ • Incorrect Data
+    • Unusual Difference Between Birth Date and Created Date: The query identified 62 rows where the calculated age from the Birth Date exceeded 100 years, 
+    indicating very elderly individuals who were unlikely to have a recent record creation. (see query#10)
+    • Created Date Before Birth Date: There was one row where the Created Date occurred before the Birth Date, which was logically impossible. (see query#11)
+    • Unreliable Data of Birth Date Field: The inclusion of a time component (00:00:00.000 Z) introduces potentially inaccurate information. Since most people don’t remember 
+    or share their exact birth time, this could indicate default system values, incorrect data entry, or even fake data. 
+
+ • Inaccurate Data format
+    • Inconsistent Birth Date Field: a time component (00:00:00.000 Z) is included, but since only the date is relevant for this field, the inclusion of the time part 
+    introduces inconsistency in how birth dates are stored. To standardize the data, it would be better to store just the date (e.g., YYYY-MM-DD) across all records.
+
+
+6. In <Products File>
+• Duplicate Data
+    • Duplicate Barcode: The query identified multiple rows with the same Barcode, indicating potential duplicate product entries in the system.   
+    Specifically, the same Barcode is associated with 2 different Brands. (see query#12)
+
+• Inconsistent Data
+    • Same Brand Under Different Manufacturers: Brands like CHAPSTICK, LE PETIT MARSEILIAIS, and TYGAZ appeared under more than one manufacturer, 
+    This could indicate legitimate reasons like licensing or co-manufacturing, but it may also point to data entry errors or inconsistencies. 
+    Further investigation is needed to confirm if this is accurate or a data issue. (see query#13)
+    • Inconsistent Barcode Lengths: The results showed that the Barcode field contained values with various lengths that deviated from the expected 12 or 13 characters. (see query#14)  
+    
+ 
+
+
+Q: Are there any fields that are challenging to understand?
+
+1. The FINAL_QUANTITY field in <Transaction file> is unclear, especially with values like 4.55. It's ambiguous whether it represents weight, units, or something else. 
+Additionally, without a clear relationship to FINAL_SALE, it’s hard to understand if the price reflects a per-weight cost or unit cost, which creates uncertainty in interpretation.
+
+2. Language Code (es-419) in <User File>: The es-419 language might not be immediately clear to all users. 
+
+3. Time Zone Representation in <User File>: The Z at the end of the Birth Date and Created Date fields might not be fully understood by everyone.
+
+4. The entry "MAPLE HOLISTICS AND HONEYDEW PRODUCTS INTERCHANGEABLY" in the Manufacturer field in <Products File> is unclear, 
+as it ambiguously references either one entity with two interchangeable names or two distinct entities. 
+
+
+
+
+Q: What are the top 5 brands by receipts scanned among users 21 and over? (see query#15)
+
+-> Key assumptions: Assume we only valid/cleaned data (user, transactions, product)
+
+BRAND	         receipt_count
+---------------  ---------------
+NERDS CANDY	     3
+DOVE	         3
+TRIDENT	         2
+SOUR PATCH KIDS	 2
+HERSHEY'S	     2
+
+
+
+
+
+Q: What are the top 5 brands by sales among users that have had their account for at least six months? (see query#16)
+
+-> Key assumptions: Assume 6 months = 180 days
+
+BRAND	    total_sales
+----------  ---------------
+CVS	        72
+DOVE	    30.91
+TRIDENT	    23.36
+COORS LIGHT	17.48
+TRESEMMÉ	14.58
+
+
+
+
+
+Q: Who are Fetch’s power users? (see query#17)
+
+-> Key assumptions: 
+ • Define Power Users as those with total spending >= 20 or at least 2 receipts or at least 2 items;
+    • This is because the 80th percentile of the sum_spending_per_user is approximately 19.35, so I make it 20 for simplicity;
+    • And I want to focus on users who are actively engaged and not just first-time buyers.
+
+age_group	GENDER	LANGUAGE	STATE	power_user_count	avg_spending_per_user	avg_receipts_per_user	avg_items_per_user
+----------  ------  ----------  ------  -----------------   ----------------------  ----------------------  ------------------
+26-35	    female	en	        NC	    2	                9.72	                2.5                 	2.5
+36-50	    female	en	        IL	    2	                7.295	                2.0                     2.0
+36-50	    female	en	        WI	    2	                9.705	                2.0                 	2.0
+50+	        female	en	        OK	    2	                5.58	                2.0	                    2.0
+26-35	    female	en	        TN	    1	                14.99	                3.0	                    3.0
+26-35	    male	en	        VA	    1	                11.04	                2.0	                    2.0
+36-50	    female	en	        AL	    1	                8.27	                2.0	                    2.0
+36-50	    female	en	        PA	    1	                11.3	                3.0	                    3.0
+36-50	    female	en	        WV	    1	                6.25	                3.0	                    3.0
+36-50	    female	es-419	    CA	    1	                14.27	                2.0	                    2.0
+36-50	    male	en	        NC	    1	                8.98	                2.0	                    2.0
+36-50	    male	en	        NY	    1	                6.68	                2.0	                    2.0
+50+	        female	en	        FL	    1	                10.85	                2.0	                    2.0
+50+	        female	en	        IL	    1	                7.68	                2.0	                    2.0
+50+	        female	en	        KY	    1	                6.14	                2.0	                    2.0
+50+	        female	en	        MO	    1	                2.99	                2.0                 	2.0
+50+	        female	en	        NY	    1	                26.14	                3.0                 	3.0
+50+	        female	en	        SC	    1	                7.86	                2.0                 	2.0
+50+ 	    male	en	        GA	    1	                3.98	                2.0	                    2.0
+50+	        male	en	        PA	    1               	75.99	                2.0	                    2.0
+
+
+
+Summary in short: Fetch's power users are middle-aged to older women, who predominantly speak English and reside in states like North Carolina, Illinois, and Wisconsin. 
+
+Observations based on query result: 
+1. Dominance by Gender: 
+The majority of power users are female across all age groups and states. 
+Only a few males appear in the data.
+
+2. Age Distribution:
+The 36-50 age group has the highest representation across different states.
+The 50+ age group also shows significant participation, indicating strong engagement from middle-aged and older users.
+Younger age groups, particularly under 18, are entirely absent.
+
+3. Language Preference:
+Most power users speak English (en), with only a few Spanish-speaking users (es-419). 
+
+4. State Representation:
+North Carolina (NC), Illinois (IL), and Wisconsin (WI) have multiple power users.
+Other states, like California (CA) and Florida (FL), have a mix of engaged users, but they are not as prominent as expected given their larger populations.
+
+5. High-Spending Outliers::
+A user in New York (NY) aged 50+ spent significantly more than others, with an average of $26.14 per receipt.
+A user in Pennsylvania (PA) (male, 50+) is a major outlier with $75.99 in average spending.
+
+
+
+
+
+Q: Construct an email or slack message that is understandable to a product or business leader who is not familiar with your day-to-day work. 
+Summarize the results of your investigation. Include:
+-Key data quality issues and outstanding questions about the data
+-One interesting trend in the data
+    Use a finding from part 2 or come up with a new insight
+-Request for action: explain what additional help, info, etc. you need to make sense of the data and resolve any outstanding issues
+
+
+
+
+Hi XXX,
+
+I wanted to share an update on two important topics that are critical for our product and business strategies: the Power Users analysis and a recent data quality review.
+
+>> Power Users Analysis Insights: I completed an analysis of power users based on their spending, receipts, and items, grouped by age, gender, language, and state. 
+Here are the key insights:
+1. Female Users are Highly Engaged: Across all age groups, females are the most active, especially in the 26-50 range. 
+This could inform our product and promotional strategies.
+
+2. Older Demographics are High-Spending: Users aged 50+ show higher spending, particularly in states like Pennsylvania. 
+This could present an opportunity for targeted rewards or campaigns.
+
+
+>> What I Need to Proceed:
+- Clarification on Target Groups: Do we have any specific business goals around targeting certain 
+demographics (e.g., gender, age group)? This would help refine our analysis and make it more actionable.
+
+- State-Level Strategy: There’s a noticeable concentration of power users in certain states like North Carolina, Illinois, 
+and Florida. Do we have any ongoing regional marketing efforts or campaigns? Understanding this could guide us in suggesting 
+regional product tweaks or localized rewards.
+
+
+>> Data Quality Review Summary: During a recent data quality review, I identified several issues that could impact product tracking, 
+reward accuracy, and personalized services. Here’s a quick breakdown:
+1. Missing Data:
+    - Barcode values missing in Transactions (11.5%) and Products File (0.5%), impacting tracking and linking.
+    - Critical fields like Language (30%) in Users and Category_4 (92%) in Products File are incomplete.
+
+2. Inconsistencies:
+    - Duplicate and mismatched transactions, including rows where Final Quantity is zero but Final Sale is non-zero.
+    - Some dates and barcode lengths are inconsistent or invalid.
+
+3. Linking Key Mismatch across Data Files:
+    - Approximately 99.5% of transactions fail to link to users, and 50.35% fail to link to products due to mismatched or missing keys.
+        - This severely impacts our ability to track user activity, associate transactions with products, and derive insights for product performance.
+
+4. Standardization Issues:  
+    - Variations in Gender field values (e.g., "Non-Binary" vs. "non_binary") and unnecessary time components in Birth Date complicate reporting.
+
+5. Integrity Concerns:
+    - Implausible ages (>100 years) in Users and duplicate Barcodes linked to different brands in Products file.
+
+I believe addressing these issues will provide us with a more accurate, reliable data set and ultimately improve our product offerings and business operations.
+Any priorities you have regarding the resolution of these data quality issues—whether it's addressing the most critical fields first or a broader data cleanup effort.
+
+Looking forward to your thoughts!
+
+Thanks,
+Cathy 
